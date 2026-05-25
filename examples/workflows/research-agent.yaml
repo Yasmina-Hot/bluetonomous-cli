@@ -1,0 +1,58 @@
+version: '1'
+name: research-agent
+description: Multi-step research pipeline that searches, summarizes, and synthesizes findings
+author: bluetonomous
+
+inputs:
+  topic:
+    type: string
+    description: Research topic
+    required: true
+  depth:
+    type: string
+    description: Research depth (quick, standard, deep)
+    default: standard
+
+defaults:
+  provider: anthropic
+  model: claude-sonnet-4-6
+
+steps:
+  - id: outline
+    name: Research Outline
+    type: ai
+    prompt: |
+      Create a research outline for: "{{inputs.topic}}"
+
+      Generate 3-5 key subtopics to investigate. Return as a JSON array of strings.
+    outputAs: subtopics
+
+  - id: deep_dive
+    name: Deep Analysis
+    type: ai
+    dependsOn: [outline]
+    prompt: |
+      Provide a comprehensive analysis of: "{{inputs.topic}}"
+
+      Key aspects to cover from the outline:
+      {{steps.outline.output}}
+
+      Depth level: {{inputs.depth}}
+
+      Include: background, current state, key players, challenges, future outlook.
+    outputAs: analysis
+
+  - id: executive_summary
+    name: Executive Summary
+    type: ai
+    dependsOn: [deep_dive]
+    model: claude-haiku-4-5-20251001
+    prompt: |
+      Write a concise executive summary (3-5 bullet points) of:
+      {{steps.deep_dive.output}}
+    outputAs: summary
+
+outputs:
+  summary: "{{steps.executive_summary.output}}"
+  full_analysis: "{{steps.deep_dive.output}}"
+  subtopics: "{{steps.outline.output}}"
