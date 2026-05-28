@@ -1,0 +1,74 @@
+version: '1'
+name: code-review-pipeline
+description: Parallel security and quality review of a code diff, then synthesizes findings
+author: bluetonomous
+
+inputs:
+  diff:
+    type: string
+    description: Git diff content to review
+    required: true
+  focus:
+    type: string
+    description: Optional focus area (security, performance, style, all)
+    default: all
+
+defaults:
+  provider: anthropic
+  model: claude-sonnet-4-6
+  timeout: 60000
+
+steps:
+  - id: security_review
+    name: Security Analysis
+    type: ai
+    prompt: |
+      Review this code diff for security vulnerabilities. Focus on:
+      - Injection attacks (SQL, command, XSS)
+      - Authentication/authorization issues
+      - Sensitive data exposure
+      - Cryptography misuse
+
+      Diff:
+      {{inputs.diff}}
+
+      Return a structured list of findings with severity (critical/high/medium/low).
+    outputAs: security_findings
+
+  - id: quality_review
+    name: Code Quality Review
+    type: ai
+    # No dependsOn — runs in parallel with security_review
+    prompt: |
+      Review this code diff for quality issues. Focus on:
+      - Code clarity and maintainability
+      - Performance implications
+      - Error handling
+      - Test coverage gaps
+
+      Diff:
+      {{inputs.diff}}
+
+      Return a structured list of suggestions with priority (high/medium/low).
+    outputAs: quality_findings
+
+  - id: synthesize
+    name: Synthesize Report
+    type: ai
+    dependsOn: [security_review, quality_review]
+    prompt: |
+      Combine these code review findings into a clear, actionable report.
+
+      Security findings:
+      {{steps.security_review.output}}
+
+      Quality findings:
+      {{steps.quality_review.output}}
+
+      Format as markdown with sections: ## Summary, ## Critical Issues, ## Recommendations
+    outputAs: final_report
+
+outputs:
+  report: "{{steps.synthesize.output}}"
+  security: "{{steps.security_review.output}}"
+  quality: "{{steps.quality_review.output}}"

@@ -1,0 +1,113 @@
+{
+  "name": "bluetonomous",
+  "version": "0.1.0",
+  "description": "A command-line interface for orchestrating multi-agent operations with an ocean of features.",
+  "keywords": ["ai", "cli", "agents", "mcp", "llm", "multimodal"],
+  "homepage": "https://github.com/yasmina-hot/bluetonomous-cli",
+  "bugs": "https://github.com/yasmina-hot/bluetonomous-cli/issues",
+  "repository": "yasmina-hot/bluetonomous-cli",
+  "license": "MIT",
+  "type": "module",
+  "exports": "./lib/index.js",
+  "types": "./lib/index.d.ts",
+  "bin": {
+    "bluetonomous": "./bin/run.js",
+    "bt": "./bin/run.js"
+  },
+  "files": [
+    "/bin",
+    "/lib",
+    "/oclif.manifest.json"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsx src/index.ts",
+    "lint": "eslint src --ext .ts,.tsx",
+    "format": "prettier --write src",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "postpack": "rm -f oclif.manifest.json",
+    "prepack": "npm run build && oclif manifest",
+    "version": "oclif readme && git add README.md"
+  },
+  "dependencies": {
+    "@ai-sdk/anthropic": "^1.2.0",
+    "@ai-sdk/google": "^1.2.0",
+    "@ai-sdk/openai": "^1.2.0",
+    "@clack/prompts": "^0.10.0",
+    "@modelcontextprotocol/sdk": "^1.10.0",
+    "@oclif/core": "^4.2.0",
+    "@oclif/plugin-plugins": "^5.4.0",
+    "@oclif/plugin-update": "^4.6.0",
+    "ai": "^4.2.0",
+    "better-sqlite3": "^11.8.0",
+    "chalk": "^5.4.0",
+    "cli-table3": "^0.6.5",
+    "conf": "^13.0.0",
+    "execa": "^9.5.0",
+    "fluent-ffmpeg": "^2.1.3",
+    "groq-sdk": "^0.9.0",
+    "ink": "^5.0.1",
+    "listr2": "^8.3.0",
+    "node-cache": "^5.1.2",
+    "ollama": "^0.5.11",
+    "openai": "^4.79.0",
+    "ora": "^8.2.0",
+    "p-limit": "^6.2.0",
+    "p-queue": "^8.0.1",
+    "pino": "^9.6.0",
+    "pino-pretty": "^13.0.0",
+    "react": "^18.3.1",
+    "sharp": "^0.33.5",
+    "shiki": "^1.29.0",
+    "tsx": "^4.19.3",
+    "undici": "^7.3.0",
+    "yaml": "^2.7.0",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@oclif/test": "^4.1.0",
+    "@types/better-sqlite3": "^7.6.12",
+    "@types/fluent-ffmpeg": "^2.1.27",
+    "@types/node": "^22.0.0",
+    "@types/react": "^18.3.1",
+    "eslint": "^9.20.0",
+    "prettier": "^3.5.0",
+    "tsup": "^8.4.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  },
+  "oclif": {
+    "bin": "bt",
+    "dirname": "bluetonomous",
+    "commands": "./lib/commands",
+    "plugins": [
+      "@oclif/plugin-plugins",
+      "@oclif/plugin-update"
+    ],
+    "hooks": {
+      "init": [
+        "./lib/hooks/init/load-config",
+        "./lib/hooks/init/check-updates"
+      ]
+    },
+    "topicSeparator": " ",
+    "topics": {
+      "agent": { "description": "Manage and monitor AI agents" },
+      "workflow": { "description": "Define and run multi-step agent workflows" },
+      "mcp": { "description": "Manage MCP server connections and tools" },
+      "provider": { "description": "Configure AI providers and BYOK keys" },
+      "model": { "description": "List and inspect available models" },
+      "image": { "description": "Analyze and generate images with vision models" },
+      "video": { "description": "Analyze and transcribe video content" },
+      "audio": { "description": "Transcribe and synthesize audio" },
+      "code": { "description": "AI-powered code intelligence" },
+      "embed": { "description": "Create and search semantic embeddings" },
+      "config": { "description": "Manage CLI configuration" },
+      "keys": { "description": "Manage provider API keys" }
+    }
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
