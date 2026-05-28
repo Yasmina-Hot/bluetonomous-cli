@@ -1,5 +1,4 @@
 import { Command, Flags } from '@oclif/core'
-import chalk from 'chalk'
 import type { Message, ProviderAdapter } from '../providers/types.js'
 
 export default class Chat extends Command {
@@ -26,7 +25,11 @@ export default class Chat extends Command {
     const { providerRegistry } = await import('../providers/registry.js')
     const { config } = await import('../config/manager.js')
 
-    const providerId = flags.provider ?? config.get('defaultProvider') ?? 'anthropic'
+    const configuredDefault = config.get('defaultProvider')
+    const fallbackProvider = providerRegistry.has('anthropic')
+      ? 'anthropic'
+      : (providerRegistry.list()[0]?.id ?? 'anthropic')
+    const providerId = flags.provider ?? configuredDefault ?? fallbackProvider
     const adapter = providerRegistry.get(providerId)
 
     if (!adapter) {
@@ -44,9 +47,10 @@ export default class Chat extends Command {
     if (isPiped) {
       // Non-interactive: read stdin, respond once, exit
       await this.handlePipedInput(adapter, model, flags)
-    } else {
-      // Interactive REPL
+    } else if (process.stdout.isTTY) {
       await this.runInteractiveChat(adapter, model, flags)
+    } else {
+      this.error('Interactive chat requires a TTY. Pipe input into chat or run it in a terminal.')
     }
   }
 
@@ -90,82 +94,19 @@ export default class Chat extends Command {
     flags: Awaited<ReturnType<typeof this.parse>>['flags'],
   ) {
     const { config } = await import('../config/manager.js')
-    const readline = await import('node:readline')
-
-    const messages: Message[] = []
     const system = flags.system ?? undefined
     const temp = flags.temperature ? Number.parseFloat(flags.temperature) : config.get('temperature')
     const stream = !flags['no-stream'] && config.get('streamingEnabled') !== false
+    const { runChatTui } = await import('../tui/chat.js')
 
-    process.stdout.write(chalk.dim(`bluetonomous `) + chalk.cyan(`${adapter!.config.displayName}`) + chalk.dim(` / ${model}\n`))
-    process.stdout.write(chalk.dim('Type your message. Enter twice to send. Ctrl+C or /exit to quit.\n\n'))
-
-    const rl = readline.createInterface({ input: process.stdin, output: process.stdout, terminal: true })
-
-    const askQuestion = () =>
-      new Promise<string | null>((resolve) => {
-        process.stdout.write(chalk.green('You: '))
-        let lines: string[] = []
-        let lastWasEmpty = false
-
-        const onLine = (line: string) => {
-          if (line === '' && lastWasEmpty) {
-            rl.removeListener('line', onLine)
-            resolve(lines.slice(0, -1).join('\n').trim() || null)
-            return
-          }
-          if (line === '/exit' || line === '/quit') {
-            rl.removeListener('line', onLine)
-            resolve(null)
-            return
-          }
-          lastWasEmpty = line === ''
-          lines.push(line)
-        }
-
-        rl.on('line', onLine)
-      })
-
-    // eslint-disable-next-line no-constant-condition
-    while (true) {
-      const input = await askQuestion()
-
-      if (input === null) {
-        process.stdout.write(chalk.dim('\nGoodbye!\n'))
-        rl.close()
-        break
-      }
-
-      if (!input) continue
-
-      messages.push({ role: 'user', content: input })
-      process.stdout.write(chalk.blue('\nAssistant: '))
-
-      try {
-        let assistantText = ''
-
-        if (stream) {
-          for await (const chunk of adapter.streamText({ model, messages, system, temperature: temp, maxTokens: flags['max-tokens'] })) {
-            if (chunk.type === 'text' && chunk.text) {
-              process.stdout.write(chunk.text)
-              assistantText += chunk.text
-            }
-          }
-        } else {
-          const result = await adapter.generateText({ model, messages, system, temperature: temp, maxTokens: flags['max-tokens'] })
-          process.stdout.write(result.text)
-          assistantText = result.text
-        }
-
-        if (assistantText && !assistantText.endsWith('\n')) process.stdout.write('\n')
-        process.stdout.write('\n')
-
-        messages.push({ role: 'assistant', content: assistantText })
-      } catch (err) {
-        const message = err instanceof Error ? err.message : String(err)
-        process.stdout.write(chalk.red(`\nError: ${message}\n\n`))
-      }
-    }
+    await runChatTui({
+      adapter,
+      model,
+      system,
+      temperature: temp,
+      maxTokens: flags['max-tokens'],
+      stream,
+    })
   }
 }
 
