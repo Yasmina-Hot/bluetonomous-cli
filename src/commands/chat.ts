@@ -40,7 +40,7 @@ export default class Chat extends Command {
       )
     }
 
-    const model = flags.model ?? adapter.config.defaultModel ?? 'unknown'
+    const model = flags.model ?? config.get('defaultModel') ?? adapter.config.defaultModel ?? 'unknown'
     const isInteractive = process.stdin.isTTY
     const isPiped = !isInteractive
 
